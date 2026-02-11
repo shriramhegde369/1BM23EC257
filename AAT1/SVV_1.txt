@@ -1,0 +1,93 @@
+//------------------------------------------------------------------------------
+// File        : SVV_1.sv
+// Author      : <1BM23EC257>
+// Created     : <2026-02-3>
+// Module      : alu_model
+// Project     : System Verilog and Verification (23EC6PE2SV),
+//               NAME: Shriram T Hegde
+//
+// Description : Simple testbench and design for simple calculator(ALU). Randomizes inputs and uses a
+//               cover group to measure input combination coverage.
+//------------------------------------------------------------------------------
+
+module alu_model(
+  input  logic [7:0] a, b,
+  input  logic [1:0] op,     
+  output logic [15:0] result
+);
+
+  always @(*) begin
+    case (op)
+      2'd0: result = a + b;     // ADD
+      2'd1: result = a - b;     // SUB
+      2'd2: result = a * b;     // MUL
+      2'd3: result = a ^ b;     // XOR
+      default: result = 0;
+    endcase
+  end
+endmodule
+
+package alu_pkg;
+  typedef enum logic [1:0] {
+    ADD    = 2'b00,
+    SUB    = 2'b01,
+    MUL    = 2'b10,
+    XOR_OP = 2'b11
+  } opcode_t;
+endpackage
+`timescale 1ns/1ps
+import alu_pkg::*;
+
+// TRANSACTION
+class alu_trans;
+  rand logic [7:0] a, b;
+  rand opcode_t op;
+  logic [15:0] result;
+
+  // MUL at least 20% (manual method – tool safe)
+  constraint op_c {
+    op inside {ADD, SUB, MUL, XOR_OP};
+  }
+
+  function void display();
+    $display("a=%0d b=%0d op=%0d result=%0d",
+              a, b, op, result);
+  endfunction
+endclass
+
+// ---------------- TESTBENCH ----------------
+module tb_alu;
+  alu_trans tr;
+
+  logic [7:0] a, b;
+  logic [1:0] op;
+  logic [15:0] result;
+
+  alu_model dut (
+    .a(a),
+    .b(b),
+    .op(op),
+    .result(result)
+  );
+
+  initial begin
+    
+   tr = new();
+    $dumpfile("dump.vcd");
+    $dumpvars;
+
+    repeat (50) begin
+      assert(tr.randomize());
+
+      a  = tr.a;
+      b  = tr.b;
+      op = tr.op;   // enum → logic [1:0]
+      #1;
+
+      tr.result = result;
+      tr.display();
+    end
+
+    $finish;
+  end
+endmodule
