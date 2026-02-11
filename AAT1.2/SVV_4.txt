@@ -1,0 +1,75 @@
+//------------------------------------------------------------------------------
+// File        : SVV_4.sv
+// Author      : <1BM23EC257>
+// Created     : <2026-02-3>
+// Module      : D-ff
+// Project     : System Verilog and Verification (23EC6PE2SV),
+//               NAME: Shriram T Hegde
+//
+// Description : Simple testbench and design for d-flip flop. Randomizes inputs and uses a
+//               cover group to measure input combination coverage.
+//------------------------------------------------------------------------------
+//--------------------------------Design----------------------------
+`timescale 1ns/1ps
+module dff (
+  input  logic clk,
+  input  logic reset,   // async active-high reset
+  input  logic d,
+  output logic q
+);
+
+  always_ff @(posedge clk or posedge reset) begin
+    if (reset)
+      q <= 1'b0;
+    else
+      q <= d;
+  end
+
+endmodule
+
+//--------------------------Test bench-------------------
+`timescale 1ns/1ps
+
+module tb;
+    logic clk;
+    logic reset;
+    logic d;
+    logic q;
+
+
+    dff dut (
+        .clk(clk),
+        .reset(reset),
+        .d(d),
+        .q(q)
+    );
+    initial clk = 0;
+    always #5 clk = ~clk;
+    initial begin
+        $dumpfile("dff.vcd");
+        $dumpvars(0, tb);
+        $display("Time\tclk reset d q");
+        $monitor("%0t\t%b    %b     %b %b", $time, clk, reset, d, q);
+
+        // Initialize inputs
+        reset = 1;
+        d = 0;
+
+        // Keep reset active for some time
+        #12;
+        reset = 0;
+
+        // Apply different values
+        #10 d = 1;
+        #10 d = 0;
+        #10 d = 1;
+
+        // Apply reset again in between
+        #7  reset = 1;
+        #10 reset = 0;
+
+        #20 d = 0;
+        #20 $finish;
+    end
+
+endmodule
