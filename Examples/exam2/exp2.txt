@@ -1,0 +1,75 @@
+//------------------------------------------------------------------------------
+// File        : exp2.sv
+// Author      : <1BM23EC257>
+// Created     : <2026-02-6>
+// Module      :2_1mux
+// Project     : System Verilog and Verification (23EC6PE2SV),
+//               NAME: Shriram T Hegde
+//
+// Description : Simple testbench and design for a 2x1mux. Randomizes inputs and uses a
+//               cover group to measure input combination coverage.
+//----------------------------------------------------
+
+//----------------------------Design-------------------------
+`timescale 1ns/1ps
+module mux2x1 (
+    input  logic a,      // input 0
+    input  logic b,      // input 1
+    input  logic sel,    // select line
+    output logic y       // output
+);
+
+    // MUX logic
+    assign y = sel ? b : a;
+
+endmodule
+
+//-----------------------Test bench-------------------
+
+
+module tb;
+
+    logic a;
+    logic b;
+    logic sel;
+    logic y;
+
+    // Instantiate Design (DUT)
+    mux2x1 dut (
+        .a(a),
+        .b(b),
+        .sel(sel),
+        .y(y)
+    );
+    // Stimulus block
+    initial begin
+
+        $display("Time\tSel A B | Y");
+        $display("---");
+        $monitor("%0t\t %b  %b %b | %b", $time, sel, a, b, y);
+
+        // Initialize inputs
+        a = 0; b = 0; sel = 0;
+
+        // Test all input combinations
+
+        sel=0; a=0; b=0; #10;
+        sel=0; a=0; b=1; #10;
+        sel=0; a=1; b=0; #10;
+        sel=0; a=1; b=1; #10;
+
+        sel=1; a=0; b=0; #10;
+        sel=1; a=0; b=1; #10;
+        sel=1; a=1; b=0; #10;
+        sel=1; a=1; b=1; #10;
+
+        #10 $finish;
+    end
+
+    // Waveform dump
+        initial begin
+        $dumpfile("mux2x1.vcd");
+        $dumpvars(0, tb);
+    end
+
+endmodule
