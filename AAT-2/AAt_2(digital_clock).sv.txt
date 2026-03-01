@@ -1,0 +1,158 @@
+//------------------------------------------------------------------------------
+// File        : Digital_clock
+// Author      : <1BM23EC257>
+// Created     : <2026-02-28>
+// Module      : Digital clock
+// Project     : System Verilog and Verification (23EC6PE2SV),
+//               NAME: Shriram T Hegde
+//
+// Description : Simple testbench and design for digital clock . Randomizes inputs and uses a
+//               cover group to measure input combination coverage.
+//------------------------------------------------------------------------------
+
+//-------------------------------------design-------------------------------
+`timescale 1ns/1ps
+
+module digital_clock (
+  input  logic clk,
+  input  logic reset,
+  output logic [5:0] seconds,
+  output logic [5:0] minutes
+);
+
+always_ff @(posedge clk) begin
+
+  // Reset → both go to 0
+  if (reset) begin
+    seconds <= 6'd0;
+    minutes <= 6'd0;
+  end
+
+  else begin
+
+    // When seconds reaches 59 → reset seconds + increment minutes
+    if (seconds == 6'd59) begin
+      seconds <= 6'd0;
+      minutes <= minutes + 1;   // minutes increments only here
+    end
+
+    // Otherwise keep counting seconds
+    else begin
+      seconds <= seconds + 1;
+    end
+
+  end
+
+end
+
+endmodule
+
+//--------------------------------test_brnch---------------------------------
+`timescale 1ns/1ps
+
+module clock_tb;
+
+  logic clk;
+  logic reset;
+  logic [5:0] seconds;
+  logic [5:0] minutes;
+
+  // DUT
+  digital_clock dut(
+    .clk(clk),
+    .reset(reset),
+    .seconds(seconds),
+    .minutes(minutes)
+  );
+
+  // Clock generation (10ns period)
+  initial begin
+    clk = 0;
+    forever #5 clk = ~clk;
+  end
+
+  // Stimulus
+  initial begin
+
+    // Apply reset
+    reset = 1;
+    #20;
+
+    reset = 0;
+
+    // Run long enough to see rollover
+    #4000;
+
+    $display("Simulation finished");
+    $finish;
+
+  end
+
+  // Monitor values
+  initial begin
+    $monitor("Time=%0t | reset=%0b | sec=%0d | min=%0d",
+              $time, reset, seconds, minutes);
+  end
+
+  // Simple SystemVerilog assertions
+  always @(posedge clk) begin
+    assert(seconds <= 59)
+      else $error("Seconds exceeded 59");
+
+    assert(minutes <= 59)
+      else $error("Minutes exceeded 59");
+  end
+
+  // Waveform dump
+  initial begin
+    $dumpfile("clock_wave.vcd");
+    $dumpvars(0, clock_tb);
+  end
+
+endmodule
+//-----------------------------------iterface-------------------------------------
+interface clock_interface (input logic clk);
+
+    logic reset;
+    logic [5:0] seconds;
+    logic [5:0] minutes;
+
+    modport DUT (
+        input  clk,
+        input  reset,
+        output seconds,
+        output minutes
+    );
+
+    modport TB (
+        input  clk,
+        output reset,
+        input  seconds,
+        input  minutes
+    );
+
+endinterface
+//-------------------------------------------top_module----------------
+module clock_tb;
+
+    logic clk;
+
+    // Clock generation
+    initial clk = 0;
+    always #5 clk = ~clk;  // 10ns period
+
+    // Interface instance
+    clock_interface intf (clk);
+
+    // DUT instance
+    digital_clock dut (
+        .clk     (intf.clk),
+        .reset   (intf.reset),
+        .seconds (intf.seconds),
+        .minutes (intf.minutes)
+    );
+
+    // Test program
+    clock_test test (intf);
+
+endmodule
