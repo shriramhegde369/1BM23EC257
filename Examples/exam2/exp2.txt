@@ -1,75 +1,57 @@
 //------------------------------------------------------------------------------
 // File        : exp2.sv
 // Author      : <1BM23EC257>
-// Created     : <2026-02-6>
-// Module      :2_1mux
+// Created     : <2026-02-12>
+// Module      :the 8 byte packet
 // Project     : System Verilog and Verification (23EC6PE2SV),
 //               NAME: Shriram T Hegde
 //
-// Description : Simple testbench and design for a 2x1mux. Randomizes inputs and uses a
+// Description : Simple testbench and design for a 8byte packet. Randomizes inputs and uses a
 //               cover group to measure input combination coverage.
 //----------------------------------------------------
 
 //----------------------------Design-------------------------
-`timescale 1ns/1ps
-module mux2x1 (
-    input  logic a,      // input 0
-    input  logic b,      // input 1
-    input  logic sel,    // select line
-    output logic y       // output
-);
+class EthPacket;
 
-    // MUX logic
-    assign y = sel ? b : a;
+  // length of packet
+  rand int len;
 
-endmodule
+  // dynamic payload array
+  rand bit [7:0] payload[];
 
-//-----------------------Test bench-------------------
+  // constraint: length between 4 and 8
+  constraint len_c {
+    len >= 4;
+    len <= 8;
+  }
+
+  // constraint: payload size must equal length
+  constraint size_c {
+    payload.size() == len;
+  }
+
+endclass
 
 
 module tb;
 
-    logic a;
-    logic b;
-    logic sel;
-    logic y;
+  EthPacket pkt;
 
-    // Instantiate Design (DUT)
-    mux2x1 dut (
-        .a(a),
-        .b(b),
-        .sel(sel),
-        .y(y)
-    );
-    // Stimulus block
-    initial begin
+  initial begin
 
-        $display("Time\tSel A B | Y");
-        $display("---");
-        $monitor("%0t\t %b  %b %b | %b", $time, sel, a, b, y);
+    pkt = new();
 
-        // Initialize inputs
-        a = 0; b = 0; sel = 0;
-
-        // Test all input combinations
-
-        sel=0; a=0; b=0; #10;
-        sel=0; a=0; b=1; #10;
-        sel=0; a=1; b=0; #10;
-        sel=0; a=1; b=1; #10;
-
-        sel=1; a=0; b=0; #10;
-        sel=1; a=0; b=1; #10;
-        sel=1; a=1; b=0; #10;
-        sel=1; a=1; b=1; #10;
-
-        #10 $finish;
+    // generate 5 random packets
+    repeat(5) begin
+      if(pkt.randomize()) begin
+        $display("Packet Length = %0d", pkt.len);
+        $display("Payload = %p", pkt.payload);
+        $display("---------------------------");
+      end
+      else
+        $display("Randomization Failed");
     end
 
-    // Waveform dump
-        initial begin
-        $dumpfile("mux2x1.vcd");
-        $dumpvars(0, tb);
-    end
+  end
 
 endmodule
