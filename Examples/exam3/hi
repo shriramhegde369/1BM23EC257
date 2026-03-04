@@ -1,1 +1,90 @@
 
+
+
+module ram_dual_port (
+    input logic clk,
+
+    // Port A : Write
+    input logic we_a,
+    input logic [7:0] addr_a,
+    input logic [7:0] data_a,
+
+    // Port B : Read
+    input logic [7:0] addr_b,
+    output logic [7:0] data_b
+);
+
+logic [7:0] mem [256];
+
+always_ff @(posedge clk) begin
+    if (we_a)
+        mem[addr_a] <= data_a;
+end
+
+assign data_b = mem[addr_b];
+
+endmodule
+//--------------------------------------tb----------------------------
+module tb;
+
+logic clk;
+
+logic we_a;
+logic [7:0] addr_a;
+logic [7:0] data_a;
+
+logic [7:0] addr_b;
+logic [7:0] data_b;
+
+ram_dual_port dut (
+    .clk(clk),
+    .we_a(we_a),
+    .addr_a(addr_a),
+    .data_a(data_a),
+    .addr_b(addr_b),
+    .data_b(data_b)
+);
+
+// Reference model (associative array)
+bit [7:0] ref_mem[int];
+
+
+// clock
+always #5 clk = ~clk;
+
+initial begin
+    clk = 0;
+
+    repeat(10) begin
+
+        // Random write
+        addr_a = $urandom_range(0,255);
+        data_a = $urandom_range(0,255);
+        we_a   = 1;
+
+        @(posedge clk);
+
+        // Update reference model
+        ref_mem[addr_a] = data_a;
+
+        // Read operation
+        we_a = 0;
+        addr_b = addr_a;
+
+        #1;
+
+        // Compare DUT with reference model
+        if(data_b == ref_mem[addr_b])
+            $display("PASS : Addr=%0d Data=%0h", addr_b, data_b);
+        else
+            $display("FAIL : Addr=%0d DUT=%0h REF=%0h",
+                      addr_b, data_b, ref_mem[addr_b]);
+
+        @(posedge clk);
+    end
+
+    $finish;
+
+end
+
+endmodule
