@@ -1,61 +1,106 @@
 //------------------------------------------------------------------------------
-// File        : exp1.sv
+// File        : SVV_3.sv
 // Author      : <1BM23EC257>
-// Created     : <2026-02-6>
-// Module      : and_gate
+// Created     : <2026-02-3>
+// Module      : ATM
 // Project     : System Verilog and Verification (23EC6PE2SV),
 //               NAME: Shriram T Hegde
 //
-// Description : Simple testbench and design for a "and gate" . Randomizes inputs and uses a
+// Description : Simple testbench and design for a ATM . Randomizes inputs and uses a
 //               cover group to measure input combination coverage.
 //------------------------------------------------------------------------------
 
-//----------------------------------DESIGN--------------------
 
-`timescale 1ns/1ps
-module and_gate (
-    input  logic a,
-    input  logic b,
-    output logic y
+//------------------------------DESIGN---------------------------------
+
+module atm_fsm (
+  input  logic clk,
+  input  logic reset,
+  input  logic card_inserted,
+  input  logic pin_correct,
+  input  logic balance_ok,
+  output logic dispense_cash
 );
 
-    assign y = a & b;
+  typedef enum logic [1:0] {IDLE, CHECK_PIN, CHECK_BAL, DISPENSE} state_t;
+  state_t state, next;
+
+  always_ff @(posedge clk or posedge reset) begin
+    if (reset)
+      state <= IDLE;
+    else
+      state <= next;
+  end
+
+  always_comb begin
+    dispense_cash = 0;
+    next = state;
+
+    case (state)
+      IDLE:       if (card_inserted) next = CHECK_PIN;
+      CHECK_PIN:  if (pin_correct) next = CHECK_BAL;
+                  else next = IDLE;
+      CHECK_BAL:  if (balance_ok) next = DISPENSE;
+                  else next = IDLE;
+      DISPENSE: begin
+        dispense_cash = 1;
+        next = IDLE;
+      end
+    endcase
+  end
 
 endmodule
 
-//--------------------TESTBENCH----------------------
+//--------------------------- TESTBENCH------------------------------
 
-module tb;
-  // Testbench signals
-    logic a, b;
-    logic y;
+`timescale 1ns/1ps   
 
-    and_gate dut (
-        .a(a),
-        .b(b),
-        .y(y)
-    );
+module tb_atm_fsm;
 
- 
-    initial begin
-        $display("Time\ta b y");
-        $monitor("%0t\t%b %b %b", $time, a, b, y);
+  logic clk;
+  logic reset;
+  logic card_inserted;
+  logic pin_correct;
+  logic balance_ok;
+  logic dispense_cash;
 
-        // Test all combinations
-        a = 0; b = 0; #10;
-        a = 0; b = 1; #10;
-        a = 1; b = 0; #10;
-        a = 1; b = 1; #10;
+  atm_fsm dut (
+    .clk(clk),
+    .reset(reset),
+    .card_inserted(card_inserted),
+    .pin_correct(pin_correct),
+    .balance_ok(balance_ok),
+    .dispense_cash(dispense_cash)
+  );
 
-        #10 $finish;
-    end
+  // Clock
+  always begin
+    #5 clk = ~clk;
+  end
 
-  
-    // Waveform dump
-    
-    initial begin
-        $dumpfile("and_gate.vcd");
-        $dumpvars(0, tb);
-    end
+  initial begin
+    $dumpfile("dump.vcd");
+    $dumpvars(0, tb_atm_fsm);
+    $dumpvars(0, dut);
+
+    clk = 0;
+    reset = 1;
+    card_inserted = 0;
+    pin_correct = 0;
+    balance_ok = 0;
+
+    #20 reset = 0;
+
+    #20 card_inserted = 1;
+    #20 pin_correct = 1;
+    #20 balance_ok = 1;
+
+    #40 card_inserted = 0;
+        pin_correct = 0;
+        balance_ok = 0;
+
+    #200 $finish;   
+  end
 
 endmodule
+
