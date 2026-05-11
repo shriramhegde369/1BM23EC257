@@ -1,6 +1,6 @@
 //------------------------------------------------------------------------------
 //File       : digital_clock.sv
-//Author     : Shriram T Hegde / 1BM23EC135
+//Author     : Shriram T Hegde / 1BM23EC257
 //Created    : 2026-02-10
 //Module     : digital_clock
 //Project    : SystemVerilog and Verification (23EC6PE2SV),
